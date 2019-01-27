@@ -7,14 +7,14 @@
 
     <title>{% block title %}{{ SITENAME }}{% endblock title %}</title>
     <link href="theme/favicon.ico" rel="icon" type="image/x-icon" />
-    <link rel="stylesheet" href="theme/css/base.css">
     <link rel="stylesheet" href="theme/css/styles.css">
+    <link rel="stylesheet" href="theme/css/pygment.css">
     {% endblock head %}
 </head>
 
 <body>
     <nav>
-        <a href="{{ SITEURL }}/">{{ SITENAME }}</a>
+        <a class="site-title" href="{{ SITEURL }}/">{{ SITENAME }}</a>
         <ul>
         {% for title, link in MENUITEMS %}
             <li><a href="{{ link }}">{{ title }}</a></li>
