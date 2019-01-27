@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <section class="post-listing">
+    {% block content_title %}<h1>All Posts</h1>{% endblock %}
+
+    {% for article in articles_page.object_list %}
+    <section>
+        <h2><a href="{{ SITEURL }}/{{ article.url }}" rel="bookmark" title="Permalink to {{ article.title|striptags }}">{{ article.title }}</a></h2>
+        <time class="published" datetime="{{ article.date.isoformat() }}"> {{ article.locale_date }} </time>
+        <div class="entry-content"> {{ article.summary }} </div>
+    </section>
+    {% endfor %}
+
+    </section>
+{% endblock content %}

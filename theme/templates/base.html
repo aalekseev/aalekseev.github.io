@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="{% block html_lang %}{{ DEFAULT_LANG }}{% endblock html_lang %}">
+<head>
+    {% block head %}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}{{ SITENAME }}{% endblock title %}</title>
+    <link href="theme/favicon.ico" rel="icon" type="image/x-icon" />
+    <link rel="stylesheet" href="theme/css/base.css">
+    <link rel="stylesheet" href="theme/css/styles.css">
+    {% endblock head %}
+</head>
+
+<body>
+    <nav>
+        <a href="{{ SITEURL }}/">{{ SITENAME }}</a>
+        <ul>
+        {% for title, link in MENUITEMS %}
+            <li><a href="{{ link }}">{{ title }}</a></li>
+        {% endfor %}
+
+        {% for title, link in LINKS %}
+            <li><a href="{{ link }}" target="_blank">{{ title }}</a></li>
+        {% endfor %}
+
+        </ul>
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+
+    <footer>
+        <p>{{ AUTHOR }} (c) 2019, powered by <a href="http://getpelican.com/">Pelican</a>.</p>
+    </footer>
+    </body>
+</html>
