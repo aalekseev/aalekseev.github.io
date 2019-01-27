@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Robotehnik Thoughts - posts</title><link href="https://aalekseev.me/" rel="alternate"></link><link href="https://aalekseev.me/feeds/posts.atom.xml" rel="self"></link><id>https://aalekseev.me/</id><updated>2018-05-07T17:36:33+03:00</updated><entry><title>Blog Optimization</title><link href="https://aalekseev.me/blog-optimization.html" rel="alternate"></link><published>2018-05-07T17:36:33+03:00</published><updated>2018-05-07T17:36:33+03:00</updated><author><name>Anton Alekseev</name></author><id>tag:aalekseev.me,2018-05-07:/blog-optimization.html</id><summary type="html">&lt;p&gt;Recently I started to mess around with Hugo, a static-site generator, written in GO. I got some pitfalls with it, but overall it is a nice piece of software. I intend to develop a theme for this engine with semantic and accessibility in mind. So this is a plan of optimization that I composed.&lt;/p&gt;</summary><content type="html">&lt;p&gt;Recently I started to mess around with Hugo, a static-site generator, written in GO. I got some pitfalls with it, but overall it is a nice piece of software. I intend to develop a theme for this engine with semantic and accessibility in mind.&lt;/p&gt;
+&lt;p&gt;So this is a plan of optimization that I composed.&lt;/p&gt;
+&lt;h2&gt;1. Inline and minify crucial CSS&lt;/h2&gt;
+&lt;p&gt;For blog theme I tried to write a minimal possible CSS (~150 lines), so why not inline it in a page? So browser won't needed to fetch it from the server.&lt;/p&gt;
+&lt;h2&gt;2. Enable gzip&lt;/h2&gt;
+&lt;p&gt;Found a neat &lt;a href="https://www.digitalocean.com/community/tutorials/how-to-add-the-gzip-module-to-nginx-on-ubuntu-14-04" title="GZip Nginx module on Ubuntu 14"&gt;article&lt;/a&gt; on DO about enabling gzip&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Check that all lines with &lt;code&gt;gzip&lt;/code&gt; are enabled&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;console
+$ sudo vim /etc/nginx/nginx.conf&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Add this line to not compress a very small files&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;nginx
+gzip_min_length 256;&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Replace line with types with larger one&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;nginx
+gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/vnd.ms-fontobject application/x-font-ttf font/opentype image/svg+xml image/x-icon;&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;And finally, check that &lt;code&gt;Content-Encoding: gzip&lt;/code&gt; is there&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl -H &lt;span class="s2"&gt;&amp;quot;Accept-Encoding: gzip&amp;quot;&lt;/span&gt; -I http://localhost/test.css
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;3. Set Expires and Cache-Control Headers.&lt;/h2&gt;
+&lt;p&gt;I found a good solution on &lt;a href="https://serverfault.com/questions/23157/setting-expires-headers-for-static-content-served-from-nginx#334871" title="Setting expires headers for static content Nginx"&gt;ServerFault&lt;/a&gt;. Basically you need to add a block like this:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;location&lt;/span&gt; &lt;span class="p"&gt;~&lt;/span&gt;&lt;span class="sr"&gt;*&lt;/span&gt; &lt;span class="s"&gt;\.(?:ico|css|js|gif|jpe?g|png)&lt;/span&gt;$ &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kn"&gt;expires&lt;/span&gt; &lt;span class="s"&gt;30d&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="kn"&gt;add_header&lt;/span&gt; &lt;span class="s"&gt;Pragma&lt;/span&gt; &lt;span class="s"&gt;public&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="kn"&gt;add_header&lt;/span&gt; &lt;span class="s"&gt;Cache-Control&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;public&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Check that headers added&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl -I https://example.com/css/styles.css
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;4. Redirect index.html files to / urls&lt;/h2&gt;
+&lt;p&gt;After some googling I found this snippet that can do exactly this:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;# block access to /index.(php|htm|html)&lt;/span&gt;
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="s"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;$request_uri&lt;/span&gt; &lt;span class="p"&gt;~&lt;/span&gt; &lt;span class="sr"&gt;&amp;quot;/index.(php|html?)&amp;quot;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kn"&gt;rewrite&lt;/span&gt; &lt;span class="s"&gt;(.*)/&lt;/span&gt; &lt;span class="s"&gt;/&lt;/span&gt;&lt;span class="nv"&gt;$1&lt;/span&gt; &lt;span class="s"&gt;permanent&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;5. Add a nice page for server errors&lt;/h2&gt;
+&lt;p&gt;Adding custom error page is super easy&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;location&lt;/span&gt; &lt;span class="s"&gt;/&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kn"&gt;try_files&lt;/span&gt; &lt;span class="nv"&gt;$uri&lt;/span&gt; &lt;span class="nv"&gt;$uri/&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;404&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="kn"&gt;error_page&lt;/span&gt; &lt;span class="mi"&gt;404&lt;/span&gt; &lt;span class="s"&gt;/404.html&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Nice helpfull resources&lt;/h2&gt;
+&lt;p&gt;This resources can help check site performance and accessibility issues.&lt;/p&gt;
+&lt;h3&gt;Speed&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;https://www.sitespeed.io&lt;/li&gt;
+&lt;li&gt;http://www.webpagetest.org&lt;/li&gt;
+&lt;li&gt;https://developers.google.com/speed/pagespeed/insights/&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Accessibility theory&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;http://webaim.org/resources/&lt;/li&gt;
+&lt;li&gt;http://a11yproject.com/&lt;/li&gt;
+&lt;li&gt;http://webaim.org/standards/508/checklist&lt;/li&gt;
+&lt;li&gt;https://github.com/brunopulis/awesome-a11y&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Accessibility testing&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;http://wave.webaim.org/&lt;/li&gt;
+&lt;li&gt;http://colororacle.org/&lt;/li&gt;
+&lt;li&gt;https://chrome.google.com/webstore/detail/accessibility-developer-t/fpkknkljclfencbdbgkenhalefipecmb?hl=en&lt;/li&gt;
+&lt;li&gt;http://www.checkmycolours.com/&lt;/li&gt;
+&lt;li&gt;http://webaim.org/resources/contrastchecker/&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Images&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;https://imageoptim.com/&lt;/li&gt;
+&lt;li&gt;https://pngmini.com/&lt;/li&gt;
+&lt;li&gt;https://github.com/svg/svgo&lt;/li&gt;
+&lt;li&gt;https://developers.google.com/speed/webp/&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Css&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;http://cssstats.com/&lt;/li&gt;
+&lt;li&gt;http://cssdig.com/&lt;/li&gt;
+&lt;/ul&gt;</content></entry><entry><title>Python: split list into chunks</title><link href="https://aalekseev.me/python-split-list-into-chunks.html" rel="alternate"></link><published>2018-05-04T13:57:35+03:00</published><updated>2018-05-04T13:57:35+03:00</updated><author><name>Anton Alekseev</name></author><id>tag:aalekseev.me,2018-05-04:/python-split-list-into-chunks.html</id><summary type="html">&lt;p&gt;Today I found &lt;a href="https://github.com/kriadmin/30-seconds-of-python-code" title="GitHub"&gt;30 sec. of python code&lt;/a&gt; repository, that claims that every snippet there can be easily understood and copy/pasted by new developers.&lt;/p&gt;</summary><content type="html">&lt;p&gt;Today I found &lt;a href="https://github.com/kriadmin/30-seconds-of-python-code" title="GitHub"&gt;30 sec. of python code&lt;/a&gt; repository, that claims that every snippet there can be easily understood and copy/pasted by new developers.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;This project contains plenty of useful snippets which can help beginners and newcomers quickly ramp-up on grasping python 3's syntax.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;In which I strongly disagree. Take this example - a function to split list to an equal chunks&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;math&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;ceil&lt;/span&gt;
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;chunk&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;lst&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;size&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nb"&gt;list&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+        &lt;span class="nb"&gt;map&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;lambda&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;lst&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;size&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;size&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;size&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+            &lt;span class="nb"&gt;list&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;range&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;ceil&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;lst&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;size&lt;/span&gt;&lt;span class="p"&gt;)))))&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;If I was reviewing this code, I definitely recommend refactoring it. In my opinion, it is not clear enough what is going on and more - confusing to a newbie, because division in Python 2 and Python 3 works differently.&lt;/p&gt;
+&lt;p&gt;How can we make it better? This is how I feel to rewrite it:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;__future__&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;division&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;math&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;ceil&lt;/span&gt;
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;chunk&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;items&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;size&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="c1"&gt;# ceil returns float and range don&amp;#39;t like it&lt;/span&gt;
+    &lt;span class="n"&gt;stop&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;int&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ceil&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;items&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;size&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;
+        &lt;span class="n"&gt;items&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nb"&gt;slice&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;size&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;size&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;size&lt;/span&gt;&lt;span class="p"&gt;)]&lt;/span&gt;
+        &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;range&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;stop&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;]&lt;/span&gt;
+
+&lt;span class="n"&gt;chunk&lt;/span&gt;&lt;span class="p"&gt;([&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;  &lt;span class="c1"&gt;# [[1, 2], [3]]&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;As a bonus, the same concept in JavaScript (yes, I know that original repository was about JavaScript all along). Sometimes I feel like switching languages clears the mind.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kr"&gt;const&lt;/span&gt; &lt;span class="nx"&gt;range&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="kd"&gt;function&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;n&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nb"&gt;Array&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;from&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;n&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="nx"&gt;keys&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="p"&gt;};&lt;/span&gt;
+
+&lt;span class="kr"&gt;const&lt;/span&gt; &lt;span class="nx"&gt;chunk&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="kd"&gt;function&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;items&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;size&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kr"&gt;const&lt;/span&gt; &lt;span class="nx"&gt;stop&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;Math&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ceil&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;items&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;length&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="nx"&gt;size&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;range&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;stop&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="nx"&gt;map&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;function&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;i&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;list&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;slice&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;i&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="nx"&gt;size&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;i&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="nx"&gt;size&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="nx"&gt;size&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;})&lt;/span&gt;
+&lt;span class="p"&gt;};&lt;/span&gt;
+
+&lt;span class="nx"&gt;chunk&lt;/span&gt;&lt;span class="p"&gt;([&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;  &lt;span class="c1"&gt;// [[1, 2], [3]]&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;</content></entry><entry><title>HTTPS on Raspberry Pi</title><link href="https://aalekseev.me/https-on-raspberry-pi.html" rel="alternate"></link><published>2018-04-24T22:12:09+03:00</published><updated>2018-04-24T22:12:09+03:00</updated><author><name>Anton Alekseev</name></author><id>tag:aalekseev.me,2018-04-24:/https-on-raspberry-pi.html</id><summary type="html">&lt;p&gt;This post is about how to set up https on a raspberry pi device, based on my recent experience&lt;/p&gt;</summary><content type="html">&lt;p&gt;This post is about how to set up https on a raspberry pi device, based on my recent experience&lt;/p&gt;
+&lt;h2&gt;Installing certbot on Raspberry Pi&lt;/h2&gt;
+&lt;p&gt;What helped me a lot is a discussion on this &lt;a href="https://github.com/certbot/certbot/issues/2673#issuecomment-286276081" title="GitHub"&gt;issue&lt;/a&gt;. And particularly a comment. In case the issue will be harder to find I'll leave it here:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Uninstall all previous broken package/dependencies&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;add deb http://mirrordirector.raspbian.org/raspbian/ testing main contrib non-free rpi&lt;/code&gt; to &lt;code&gt;/etc/apt/sources.list&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;apt-get update&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;apt-get install certbot&lt;/code&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;For me the part with &lt;em&gt;updating&lt;/em&gt; was not enough, with the installation of certbot there was a warning about incompatible packages in the system, so I &lt;strong&gt;upgraded&lt;/strong&gt; and the problem was gone for good.&lt;/p&gt;
+&lt;h2&gt;Generate certificates&lt;/h2&gt;
+&lt;p&gt;To generate certificates with certbot&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; sudo certbot certonly -a webroot --webroot-path&lt;span class="o"&gt;=&lt;/span&gt;/var/www/html -d example.com -d www.example.com
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Now certbot will ask a lot of questions. After this, it prints to console &lt;code&gt;IMPORTANT NOTES&lt;/code&gt; block and you can check that certs were generated by issuing this command&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; sudo ls -l /etc/letsencrypt/live/your_domain_name
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;For even stronger security recommended generating the Diffie-Hellman group.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;This will take a reeeeeeeaaaaaaaaalllllyyyyy long time&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem &lt;span class="m"&gt;2048&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Configure Nginx&lt;/h2&gt;
+&lt;p&gt;It is recommended to create a &lt;code&gt;snippets&lt;/code&gt; folder in nginx folder &lt;code&gt;$ mkdir /etc/nginx/snippets&lt;/code&gt;. Here we can place reusable parts of the code that can be included in the final configuration file. Lets call this file &lt;code&gt;/etc/nginx/snippets/ssl-params.conf&lt;/code&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;# from https://cipherli.st/&lt;/span&gt;
+&lt;span class="c1"&gt;# and https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html&lt;/span&gt;
+
+&lt;span class="k"&gt;ssl_protocols&lt;/span&gt; &lt;span class="s"&gt;TLSv1&lt;/span&gt; &lt;span class="s"&gt;TLSv1.1&lt;/span&gt; &lt;span class="s"&gt;TLSv1.2&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;ssl_prefer_server_ciphers&lt;/span&gt; &lt;span class="no"&gt;on&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;ssl_ciphers&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;ssl_ecdh_curve&lt;/span&gt; &lt;span class="s"&gt;secp384r1&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;ssl_session_cache&lt;/span&gt; &lt;span class="s"&gt;shared:SSL:10m&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;ssl_session_tickets&lt;/span&gt; &lt;span class="no"&gt;off&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;ssl_stapling&lt;/span&gt; &lt;span class="no"&gt;on&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;ssl_stapling_verify&lt;/span&gt; &lt;span class="no"&gt;on&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;resolver&lt;/span&gt; &lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="s"&gt;.8.8.8&lt;/span&gt; &lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="s"&gt;.8.4.4&lt;/span&gt; &lt;span class="s"&gt;valid=300s&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;resolver_timeout&lt;/span&gt; &lt;span class="s"&gt;5s&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="c1"&gt;# Disable preloading HSTS for now.  You can use the commented out header line that includes&lt;/span&gt;
+&lt;span class="c1"&gt;# the &amp;quot;preload&amp;quot; directive if you understand the implications.&lt;/span&gt;
+&lt;span class="c1"&gt;# add_header Strict-Transport-Security &amp;quot;max-age=63072000; includeSubdomains; preload&amp;quot;;&lt;/span&gt;
+&lt;span class="k"&gt;add_header&lt;/span&gt; &lt;span class="s"&gt;Strict-Transport-Security&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;max-age=63072000&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="k"&gt;includeSubdomains&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;add_header&lt;/span&gt; &lt;span class="s"&gt;X-Frame-Options&lt;/span&gt; &lt;span class="s"&gt;DENY&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;add_header&lt;/span&gt; &lt;span class="s"&gt;X-Content-Type-Options&lt;/span&gt; &lt;span class="s"&gt;nosniff&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="c1"&gt;# ssl_dhparam /etc/ssl/certs/dhparam.pem;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;blockquote&gt;
+&lt;p&gt;Uncomment the last line if you generated Diffie-Hellman group from the previous section.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Next, for purpose of this tutorial we'll edit the default nginx configuration file &lt;code&gt;/etc/nginx/sites-available/default&lt;/code&gt;. But before, let's backup this file &lt;code&gt;cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;This config will be in two parts - first: redirect all traffic from HTTP to HTTPS&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;server&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kn"&gt;listen&lt;/span&gt; &lt;span class="mi"&gt;80&lt;/span&gt; &lt;span class="s"&gt;default_server&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="kn"&gt;listen&lt;/span&gt; &lt;span class="s"&gt;[::]:80&lt;/span&gt; &lt;span class="s"&gt;default_server&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="kn"&gt;server_name&lt;/span&gt; &lt;span class="s"&gt;example.com&lt;/span&gt; &lt;span class="s"&gt;www.example.com&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="kn"&gt;return&lt;/span&gt; &lt;span class="mi"&gt;301&lt;/span&gt; &lt;span class="s"&gt;https://&lt;/span&gt;&lt;span class="nv"&gt;$server_name$request_uri&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;The second block is about actual SSL configuration&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;server&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kn"&gt;listen&lt;/span&gt; &lt;span class="mi"&gt;443&lt;/span&gt; &lt;span class="s"&gt;ssl&lt;/span&gt; &lt;span class="s"&gt;default_server&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="kn"&gt;listen&lt;/span&gt; &lt;span class="s"&gt;[::]:443&lt;/span&gt; &lt;span class="s"&gt;ssl&lt;/span&gt; &lt;span class="s"&gt;default_server&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="kn"&gt;ssl_certificate&lt;/span&gt; &lt;span class="s"&gt;/etc/letsencrypt/live/example.com/fullchain.pem&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="kn"&gt;ssl_certificate_key&lt;/span&gt; &lt;span class="s"&gt;/etc/letsencrypt/live/example.com/privkey.pem&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="kn"&gt;include&lt;/span&gt; &lt;span class="s"&gt;snippets/ssl-params.conf&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="kn"&gt;root&lt;/span&gt; &lt;span class="s"&gt;/var/www/html&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="kn"&gt;index&lt;/span&gt; &lt;span class="s"&gt;index.html&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="kn"&gt;location&lt;/span&gt; &lt;span class="s"&gt;/&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="kn"&gt;try_files&lt;/span&gt; &lt;span class="nv"&gt;$uri&lt;/span&gt; &lt;span class="nv"&gt;$uri/&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;404&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Above is a complete config for a static site with &lt;code&gt;index.html&lt;/code&gt; entry point that located in &lt;code&gt;/var/www/html&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Now, let's check nginx configuration file&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; sudo nginx -t
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Reload Nginx config after making changes&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; sudo service nginx reload
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Certificate auto-renewal&lt;/h2&gt;
+&lt;p&gt;Letsenscript certifictes only last for 90 days, so it is recommended to renew certificates once in a while. A great tool for such tasks will be cron task manager that available without installation on many Unix systems by default.&lt;/p&gt;
+&lt;p&gt;To edit tasks list&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; sudo crontab -e
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Add this line to file&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;30 2 * * * /usr/bin/certbot renew --noninteractive --renew-hook &amp;quot;/bin/systemctl reload nginx&amp;quot; &amp;gt;&amp;gt; /var/log/le-renew.log
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Be careful, every user in a system have their own tasks list!&lt;/p&gt;
+&lt;h2&gt;The Last&lt;/h2&gt;
+&lt;p&gt;Some tips if you encounter any errors:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Be sure to check that router from where raspberry gets internet access have open connections for port &lt;code&gt;443&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;If nginx warns that it can't bind to port &lt;code&gt;80&lt;/code&gt;, look at who is listening to that port with &lt;code&gt;$ netstat -tunapl | grep 80&lt;/code&gt;. I read that sometimes there was installed apache and they conflict with each other.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Great resource to check your site SSL certificate score is here - &lt;a href="https://www.ssllabs.com/ssltest/analyze.html?d=example.com"&gt;SSL Online Analyzer Tool&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;This article is greatly inspired by this, more in-depth publication from digitalocean &lt;a href="https://www.digitalocean.com/community/tutorials/how-to-secure-nginx-with-let-s-encrypt-on-debian-8" title="Digital Ocean tutorial"&gt;Let's Enscript on Debian 8&lt;/a&gt;&lt;/p&gt;
+&lt;h2&gt;The Last Last&lt;/h2&gt;
+&lt;p&gt;This is some badass sites about HTTPS and DNS&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://howDNS.works" title="Animated comix explanation"&gt;How DNS works&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://howHTTPS.works" title="Animated comix explanation"&gt;How HTTPS works&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content></entry><entry><title>Ubuntu networking issues</title><link href="https://aalekseev.me/ubuntu-networking-issues.html" rel="alternate"></link><published>2017-10-01T00:00:00+03:00</published><updated>2017-10-01T00:00:00+03:00</updated><author><name>Anton Alekseev</name></author><id>tag:aalekseev.me,2017-10-01:/ubuntu-networking-issues.html</id><summary type="html">&lt;p&gt;A post about issues with network drivers on Ubuntu, that lead to a discovery of lvm partition magic, learning chroot and reasoning about Ubuntu and hardware.&lt;/p&gt;</summary><content type="html">&lt;p&gt;A post about issues with network drivers on Ubuntu, that lead to a discovery of lvm partition magic, learning chroot and reasoning about Ubuntu and hardware.&lt;/p&gt;
+&lt;p&gt;This was one of that day when suddenly things go wild south. It started with a frozen system and fall down all way to missing drivers for network hardware. Debugging problem was hard, with intense use of &lt;code&gt;lshw&lt;/code&gt;, &lt;code&gt;lspci&lt;/code&gt;, &lt;code&gt;nmcli&lt;/code&gt;, &lt;code&gt;ifconfig&lt;/code&gt;, grepping through &lt;code&gt;dmesg&lt;/code&gt;. Finally, I found out that it was a network driver issue, download it and like in old times &lt;code&gt;make clean modules &amp;amp;&amp;amp; make install&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Also, it is not obvious but ethernet and wireless networks have different drivers thus it can be easy that only wireless or only ethernet network can be unreachable.&lt;/p&gt;
+&lt;p&gt;But what really helped me was the ability to connect to broken system from live-cd with working internet connection.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="go"&gt;sudo mkdir /mnt/ubuntu&lt;/span&gt;
+&lt;span class="go"&gt;sudo mount /dev/ubuntu-vg/root /mnt/ubuntu&lt;/span&gt;
+
+&lt;span class="go"&gt;sudo mount --bind /dev /mnt/ubuntu/dev&lt;/span&gt;
+&lt;span class="go"&gt;sudo mount --bind /dev/pts /mnt/ubuntu/dev/pts&lt;/span&gt;
+&lt;span class="go"&gt;sudo mount --bind /proc /mnt/ubuntu/proc&lt;/span&gt;
+&lt;span class="go"&gt;sudo mount --bind /sys /mnt/ubuntu/proc&lt;/span&gt;
+
+&lt;span class="go"&gt;sudo chroot /mnt/ubuntu&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;And that's how you can try to fix broken ubuntu system. For example, if you &lt;strong&gt;accidentally&lt;/strong&gt; put your system in an infinity booting loop or system won't boot.&lt;/p&gt;
+&lt;p&gt;In my case, it was that I was not able to install anything without an internet connection. I could download package on the flash drive, put it into working notebook and install with &lt;code&gt;dpkg&lt;/code&gt;, but any program packages have dependencies, the more packages you want to install the more dependencies you get. And once apt manager sees unmet dependency it blocks purging, installing etc.&lt;/p&gt;
+&lt;p&gt;So, while this all was good, and I fixed my network connection, there was still a thought about what if ubuntu brokes again, and I will be downloading, installing and loading live-cd to fix it, maybe I better off installing another Linux distro on the same device.&lt;/p&gt;
+&lt;p&gt;I must say that modern ubuntu installation is suggesting the use of lvm. It is like a local volume instead of managing real physical volumes. And advantages of this approach is that you can have multiple HDD's but can manage space in them as a whole. But I best like it's &lt;code&gt;disadvantage&lt;/code&gt; 😈.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;When you broke one local volume, you lost data on all physical volumes that local volume managed&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;So, as I understand for today there is not much of a GUI interface for working with lvm. There is a &lt;code&gt;system-config-lvm&lt;/code&gt;, a relatively old package, but its disadvantage is that it will not install easily on modern Ubuntu 17+, you have to add package repo to apt and some users on StackOverflow are saying that this GUI program can be a reason for data loss, where console way with &lt;code&gt;lvresize&lt;/code&gt; and &lt;code&gt;lvcreate&lt;/code&gt; is a safer way.&lt;/p&gt;
+&lt;p&gt;In order to split lv partition you need to issue only two commands:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="go"&gt;sudo lvresize -L 800G /dev/ubuntu-vg/root&lt;/span&gt;
+&lt;span class="go"&gt;sudo lvcreate -L 200G -n kali ubuntu-vg&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Here &lt;code&gt;ubuntu-vg&lt;/code&gt; is local volume group, &lt;code&gt;kali&lt;/code&gt; is new local volume partition name, &lt;code&gt;-L&lt;/code&gt; stands for limit and sets the new size of the partition.&lt;/p&gt;
+&lt;p&gt;Also, there is a handy command &lt;code&gt;lvdisplay&lt;/code&gt; for getting info about local volumes, they're name and group and &lt;code&gt;lvextend&lt;/code&gt; for extending local volume size.&lt;/p&gt;
+&lt;p&gt;After these manipulations installing secondary os is not a problem. Only remember, if the installer will be complaining about root partition, select desired local volume, hit "change", format to any Ext file format and set the mount point to &lt;code&gt;/&lt;/code&gt;.&lt;/p&gt;</content></entry><entry><title>Javascript reformating magic</title><link href="https://aalekseev.me/javascript-reformating-magic.html" rel="alternate"></link><published>2017-09-29T00:00:00+03:00</published><updated>2017-09-29T00:00:00+03:00</updated><author><name>Anton Alekseev</name></author><id>tag:aalekseev.me,2017-09-29:/javascript-reformating-magic.html</id><summary type="html">&lt;p&gt;This post is about recently found amazing tool to make javascript (be readable) again.&lt;/p&gt;</summary><content type="html">&lt;p&gt;How often site contains tons of unbearable, unreadable, worst ever javascript code?
+This post is about recently found amazing tool to make javascript (be readable) again.&lt;/p&gt;
+&lt;p&gt;I often find myself trying to debug through auto-generated, and therefore badly formatted
+javascript code like this:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;function&lt;/span&gt; &lt;span class="p"&gt;(){&lt;/span&gt;
+    &lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="nx"&gt;win&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;function&lt;/span&gt;&lt;span class="p"&gt;(){&lt;/span&gt;
+    &lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="nx"&gt;win&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="nx"&gt;Ext&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Window&lt;/span&gt;&lt;span class="p"&gt;({&lt;/span&gt;
+        &lt;span class="nx"&gt;id&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;cmp_d4044a20&amp;#39;&lt;/span&gt;
+
+ &lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="nx"&gt;hidden&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+ &lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="nx"&gt;width&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;700&lt;/span&gt;
+ &lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="nx"&gt;height&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;400&lt;/span&gt;
+
+
+
+
+
+
+ &lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="nx"&gt;boxMinHeight&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;400&lt;/span&gt;
+
+ &lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="nx"&gt;boxMinWidth&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;700&lt;/span&gt;
+
+&lt;span class="c1"&gt;// ~2000 lines of pain down here&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Isn't it be great to magically &lt;em&gt;re&lt;/em&gt;-format it? As always, Google has a bunch of garbage links
+and packages, that did no good, and I'm event won't link to that resources.&lt;/p&gt;
+&lt;p&gt;I'm present you a &lt;a href="https://dirtymarkup.com" title="Online markup cleaup tool"&gt;Dirty Markup&lt;/a&gt; by
+&lt;a href="https://www.patreon.com/claviska" title="Patreon page"&gt;Cory LaViska&lt;/a&gt; that can format code from above to this beauty:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;function&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="nx"&gt;win&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;function&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="nx"&gt;win&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="nx"&gt;Ext&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Window&lt;/span&gt;&lt;span class="p"&gt;({&lt;/span&gt;
+            &lt;span class="nx"&gt;id&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;cmp_d4044a20&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="nx"&gt;hidden&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="nx"&gt;width&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;700&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="nx"&gt;height&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;400&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="nx"&gt;boxMinHeight&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;400&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="nx"&gt;boxMinWidth&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;700&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;</content></entry><entry><title>Tale of two databases</title><link href="https://aalekseev.me/tale-of-two-databases.html" rel="alternate"></link><published>2017-09-28T00:00:00+03:00</published><updated>2017-09-28T00:00:00+03:00</updated><author><name>Anton Alekseev</name></author><id>tag:aalekseev.me,2017-09-28:/tale-of-two-databases.html</id><summary type="html">&lt;p&gt;This post describes my struggle with a task to get data difference between two databases. The winning solution was to use SQL-Workbench/J software that has tons of quality settings to do not only data diff by way more complex stuff.&lt;/p&gt;</summary><content type="html">&lt;p&gt;This post describes my struggle with a task to get data difference between two databases. The winning solution was to use SQL-Workbench/J software that has tons of quality settings to do not only data diff by way more complex stuff.&lt;/p&gt;
+&lt;h2&gt;Prequel&lt;/h2&gt;
+&lt;p&gt;Today I have not an easy task. After an unsuccessful update script, the production database was acting weird. Some records were duplicated, some have corrupted data.&lt;/p&gt;
+&lt;p&gt;This error was not spotted fast enough, the production database contains new records, so decision was made to use fixtures for lost data. But it didn’t work well because of unique constraint on the table.&lt;/p&gt;
+&lt;p&gt;Also, there was hard to spot which table it was. We can see that something wrong, but original cause of this was ephemeral. Why is this? Legacy code and sloppy naming conventions. One of the models was named like &lt;code&gt;StudyPlanSubjectVariantPhaseBase&lt;/code&gt;. That’s a long name, and you try to guess what it means.&lt;/p&gt;
+&lt;p&gt;So I was looking for some software that can make diff report about data in two databases and also generate SQL script so we can run it for production database to recover lost data.&lt;/p&gt;
+&lt;p&gt;After googling some answers on «stack overflow» was obvious that people mostly talking about database schema diff, and not about database data diff.&lt;/p&gt;
+&lt;p&gt;Luckily after researching deeper, I found an amazing piece of software called SQL Workbench/J. The interface and documentation are not great, but it is a powerful tool, that helped me solve an issue with production data.&lt;/p&gt;
+&lt;h2&gt;SQL Workbench/J&lt;/h2&gt;
+&lt;p&gt;The first obstacle that I encounter was with database driver. Our database is running on &lt;strong&gt;PostgreSQL&lt;/strong&gt; and when you selecting this database from the menu, the program is happily telling you that it has no idea where this database driver is. And error also makes a little sense &lt;code&gt;org.postgresql.Driver not found&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;After some time, I understand that I need to download a &lt;code&gt;*.jar&lt;/code&gt; file from this site https://jdbc.postgresql.org/download.html, and manually tell SQL-Workbench/J to look at this file, take wherever it needs and keep calm.&lt;/p&gt;
+&lt;p&gt;Next steps are easy. You fill information about you database whereabouts (also I did not find if workbench can work with dumps or only real databases), host, port, user, pass e.t.c.&lt;/p&gt;
+&lt;p&gt;I encourage you to fill two databases (called «profiles» for some reason) at once while on setup step. Choose any profile and click «ok» and we are in the main window of the program.&lt;/p&gt;
+&lt;p&gt;It is not straightforward, but you need to write a special pseudo-SQL command to fire the diff process. No buttons or windows provided (it is not a bad thing, though).&lt;/p&gt;
+&lt;p&gt;I will provide a simplified example of a command that I used to the generate report:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;WbDataDiff -type=sql
+           -referenceProfile=old_db
+           -excludeTables=auth_user,django_migartions
+           -ignoreColumns=created,modified
+           -includeDelete=true
+           -file=result_folder/result.sql;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;A few important notes:
++ &lt;strong&gt;type&lt;/strong&gt; is required
++ &lt;strong&gt;ignoreColumns&lt;/strong&gt; can help distinguish important changes from timestamps updates
++ I encourage to provide &lt;strong&gt;file&lt;/strong&gt; argument with a folder because otherwise your current working directory will be polluted with &lt;code&gt;*.sql&lt;/code&gt; files&lt;/p&gt;
+&lt;h2&gt;Resume&lt;/h2&gt;
+&lt;p&gt;I was impressed by the speed and accuracy of this program and highly recommend it for all sorts of database manipulation and analyze.&lt;/p&gt;</content></entry></feed>
