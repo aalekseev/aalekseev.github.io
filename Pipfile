@@ -8,6 +8,8 @@ verify_ssl = true
 [packages]
 pelican = "*"
 markdown = "*"
+ghp-import = "*"
+invoke = "*"
 
 [requires]
 python_version = "3.7"
