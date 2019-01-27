@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <section class="post-listing">
-    {% block content_title %}<h1>All Posts</h1>{% endblock %}
+    <section>
+    {% block content_title %}<h1>Posts</h1>{% endblock %}
 
     {% for article in articles_page.object_list %}
     <section>

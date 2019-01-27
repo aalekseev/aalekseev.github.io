@@ -3,26 +3,25 @@
 <head>
     {% block head %}
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>{% block title %}{{ SITENAME }}{% endblock title %}</title>
-    <link href="theme/favicon.ico" rel="icon" type="image/x-icon" />
     <link rel="stylesheet" href="theme/css/base.css">
-    <link rel="stylesheet" href="theme/css/styles.css">
+    <link rel="stylesheet" href="theme/css/style.css">
     {% endblock head %}
 </head>
 
 <body>
+    <h1><a href="{{ SITEURL }}/">{{ SITENAME }} {{ SITESUBTITLE }}</a></h1>
     <nav>
-        <a href="{{ SITEURL }}/">{{ SITENAME }}</a>
         <ul>
         {% for title, link in MENUITEMS %}
             <li><a href="{{ link }}">{{ title }}</a></li>
         {% endfor %}
 
-        {% for title, link in LINKS %}
-            <li><a href="{{ link }}" target="_blank">{{ title }}</a></li>
-        {% endfor %}
+        {% if DISPLAY_PAGES_ON_MENU %}
+          {% for p in pages %}
+            <li{% if p == page %} class="active"{% endif %}><a href="{{ SITEURL }}/{{ p.url }}">{{ p.title }}</a></li>
+          {% endfor %}
+        {% endif %}
 
         </ul>
     </nav>
@@ -31,7 +30,7 @@
     {% endblock %}
 
     <footer>
-        <p>{{ AUTHOR }} (c) 2019, powered by <a href="http://getpelican.com/">Pelican</a>.</p>
+        <p>Powered by <a href="http://getpelican.com/">Pelican</a>.</p>
     </footer>
     </body>
 </html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+      <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Robotehnik Thoughts - Blog Optimization</title>
+    <link href="theme/favicon.ico" rel="icon" type="image/x-icon" />
+    <link rel="stylesheet" href="theme/css/base.css">
+    <link rel="stylesheet" href="theme/css/styles.css">
+
+
+
+
+</head>
+
+<body>
+    <nav>
+        <a href="/">Robotehnik Thoughts</a>
+        <ul>
+            <li><a href="/">All posts</a></li>
+
+            <li><a href="https://github.com/aalekseev" target="_blank">GitHub</a></li>
+            <li><a href="https://linkedin.com/in/aalekseev" target="_blank">LinkedIn</a></li>
+
+        </ul>
+    </nav>
+
+<article>
+    <aside>
+        <figure>
+            <img src="theme/img/me.jpg" alt="Photo">
+            <figcaption>Anton Alekseev</figcaption>
+        </figure>
+        <p>
+            Hi! I am a fullstack developer
+            at Thorgate, Tallinn.
+        </p>
+    </aside>
+
+    <h1>Blog Optimization</h1>
+
+    
+
+    <time class="published" datetime="2018-05-07T17:36:33+03:00">Mon 07 May 2018</time>
+
+    <p>Recently I started to mess around with Hugo, a static-site generator, written in GO. I got some pitfalls with it, but overall it is a nice piece of software. I intend to develop a theme for this engine with semantic and accessibility in mind.</p>
+<p>So this is a plan of optimization that I composed.</p>
+<h2>1. Inline and minify crucial CSS</h2>
+<p>For blog theme I tried to write a minimal possible CSS (~150 lines), so why not inline it in a page? So browser won't needed to fetch it from the server.</p>
+<h2>2. Enable gzip</h2>
+<p>Found a neat <a href="https://www.digitalocean.com/community/tutorials/how-to-add-the-gzip-module-to-nginx-on-ubuntu-14-04" title="GZip Nginx module on Ubuntu 14">article</a> on DO about enabling gzip</p>
+<ol>
+<li>
+<p>Check that all lines with <code>gzip</code> are enabled</p>
+<p><code>console
+$ sudo vim /etc/nginx/nginx.conf</code></p>
+</li>
+<li>
+<p>Add this line to not compress a very small files</p>
+<p><code>nginx
+gzip_min_length 256;</code></p>
+</li>
+<li>
+<p>Replace line with types with larger one</p>
+<p><code>nginx
+gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/vnd.ms-fontobject application/x-font-ttf font/opentype image/svg+xml image/x-icon;</code></p>
+</li>
+</ol>
+<p>And finally, check that <code>Content-Encoding: gzip</code> is there</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl -H <span class="s2">&quot;Accept-Encoding: gzip&quot;</span> -I http://localhost/test.css
+</pre></div>
+
+
+<h2>3. Set Expires and Cache-Control Headers.</h2>
+<p>I found a good solution on <a href="https://serverfault.com/questions/23157/setting-expires-headers-for-static-content-served-from-nginx#334871" title="Setting expires headers for static content Nginx">ServerFault</a>. Basically you need to add a block like this:</p>
+<div class="highlight"><pre><span></span><span class="k">location</span> <span class="p">~</span><span class="sr">*</span> <span class="s">\.(?:ico|css|js|gif|jpe?g|png)</span>$ <span class="p">{</span>
+    <span class="kn">expires</span> <span class="s">30d</span><span class="p">;</span>
+    <span class="kn">add_header</span> <span class="s">Pragma</span> <span class="s">public</span><span class="p">;</span>
+    <span class="kn">add_header</span> <span class="s">Cache-Control</span> <span class="s">&quot;public&quot;</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>Check that headers added</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl -I https://example.com/css/styles.css
+</pre></div>
+
+
+<h2>4. Redirect index.html files to / urls</h2>
+<p>After some googling I found this snippet that can do exactly this:</p>
+<div class="highlight"><pre><span></span><span class="c1"># block access to /index.(php|htm|html)</span>
+<span class="k">if</span> <span class="s">(</span><span class="nv">$request_uri</span> <span class="p">~</span> <span class="sr">&quot;/index.(php|html?)&quot;)</span> <span class="p">{</span>
+    <span class="kn">rewrite</span> <span class="s">(.*)/</span> <span class="s">/</span><span class="nv">$1</span> <span class="s">permanent</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<h2>5. Add a nice page for server errors</h2>
+<p>Adding custom error page is super easy</p>
+<div class="highlight"><pre><span></span><span class="k">location</span> <span class="s">/</span> <span class="p">{</span>
+    <span class="kn">try_files</span> <span class="nv">$uri</span> <span class="nv">$uri/</span> <span class="p">=</span><span class="mi">404</span><span class="p">;</span>
+    <span class="kn">error_page</span> <span class="mi">404</span> <span class="s">/404.html</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<h2>Nice helpfull resources</h2>
+<p>This resources can help check site performance and accessibility issues.</p>
+<h3>Speed</h3>
+<ul>
+<li>https://www.sitespeed.io</li>
+<li>http://www.webpagetest.org</li>
+<li>https://developers.google.com/speed/pagespeed/insights/</li>
+</ul>
+<h3>Accessibility theory</h3>
+<ul>
+<li>http://webaim.org/resources/</li>
+<li>http://a11yproject.com/</li>
+<li>http://webaim.org/standards/508/checklist</li>
+<li>https://github.com/brunopulis/awesome-a11y</li>
+</ul>
+<h3>Accessibility testing</h3>
+<ul>
+<li>http://wave.webaim.org/</li>
+<li>http://colororacle.org/</li>
+<li>https://chrome.google.com/webstore/detail/accessibility-developer-t/fpkknkljclfencbdbgkenhalefipecmb?hl=en</li>
+<li>http://www.checkmycolours.com/</li>
+<li>http://webaim.org/resources/contrastchecker/</li>
+</ul>
+<h3>Images</h3>
+<ul>
+<li>https://imageoptim.com/</li>
+<li>https://pngmini.com/</li>
+<li>https://github.com/svg/svgo</li>
+<li>https://developers.google.com/speed/webp/</li>
+</ul>
+<h3>Css</h3>
+<ul>
+<li>http://cssstats.com/</li>
+<li>http://cssdig.com/</li>
+</ul>
+
+</article>
+
+    <footer>
+        <p>Anton Alekseev (c) 2019, powered by <a href="http://getpelican.com/">Pelican</a>.</p>
+    </footer>
+    </body>
+</html>

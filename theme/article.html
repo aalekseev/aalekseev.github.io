@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <title>Article</title>
+</head>
+<body class="grid-container">
+
+    <nav>
+        <ul>
+            <li><a href="#">List of posts</a></li>
+            <li><a href="#">GitHub</a></li>
+            <li><a href="#">LinkedIn</a></li>
+        </ul>
+    </nav>
+
+    <article>
+        <aside>
+            <figure>
+                <img src="img/me.jpg" alt="Photo">
+                <figcaption>Anton Alekseev</figcaption>
+            </figure>
+            <p>
+                Hi! I am a fullstack developer
+                at Thorgate, Tallinn.
+            </p>
+        </aside>
+
+        <h1>Article template</h1>
+        <p>
+            How often site contains tons of unbearable, unreadable, worst ever javascript code?
+            This post is about recently found amazing tool to make javascript (be readable) again.
+        </p>
+        <p>
+            I often find myself trying to debug through auto-generated, and therefore badly formatted
+            javascript code like this:
+        </p>
+        <code>
+            <pre>
+(function (){
+    var win = (function(){
+    var win = new Ext.Window({
+        id: 'cmp_d4044a20'
+
+ ,hidden: true
+ ,width: 700
+ ,height: 400
+
+
+
+
+
+
+ ,boxMinHeight: 400
+
+ ,boxMinWidth: 700
+
+// ~2000 lines of pain down here
+            </pre>
+        </code>
+        <p>
+            Isn't it be great to magically <em>re</em>-format it? As always, Google has a bunch of garbage links
+            and packages, that did no good, and I'm event won't link to that resources.
+        </p>
+        <p>I'm present you a <a href="https://dirtymarkup.com" title="Online markup cleaup tool" rel="nofollow noreferrer noopener" target="_blank">Dirty Markup</a> by
+            <a href="https://www.patreon.com/claviska" title="Patreon page" rel="nofollow noreferrer noopener" target="_blank">Cory LaViska</a> that can format code from above to this beauty:
+        </p>
+        <code>
+            <pre>
+(function() {
+var win = (function() {
+    var win = new Ext.Window({
+        id: 'cmp_d4044a20',
+        hidden: true,
+        width: 700,
+        height: 400,
+        boxMinHeight: 400,
+        boxMinWidth: 700,
+            </pre>
+        </code>
+        <figure>
+            <img src="https://source.unsplash.com/1000x300" alt="Big image">
+            <figcaption>Nice photo</figcaption>
+        </figure>
+        <blockquote>
+            <p>If you build it, they will come</p>
+        </blockquote>
+    </article>
+
+    <footer>
+        <p>Anton Alekseev (c) 2019</p>
+    </footer>
+</body>
+</html>
